@@ -1,14 +1,21 @@
 version: 0.2
 
 phases:
+  install:
+    runtime-versions:
+      python: 3.8
+    commands:
+      - echo "Installing Terraform..."
+      - yum install -y unzip wget jq
+      - wget https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip
+      - unzip terraform_1.5.7_linux_amd64.zip
+      - mv terraform /usr/local/bin/
+      - terraform --version
+
   pre_build:
     commands:
-      - echo "Environment ready!"
-      - terraform --version
-      - ansible --version
-      - yum install -y jq
       - echo "Downloading dynamic tfvars from S3..."
-      - aws s3 cp s3://splunk-deployment-test/$TFVARS_S3_KEY terraform.tfvars
+      - aws s3 cp s3://splunk-deployment-prod/$TFVARS_S3_KEY terraform.tfvars
       - echo "Pre-build phase complete."
 
   build:
@@ -23,8 +30,4 @@ phases:
     commands:
       - echo "EC2 Only Deployment Completed Successfully!"
       - chmod +x scripts/stop_instance.sh
-      # Loop through all instance IDs and stop each
-      - |
-        while read id; do
-          ./scripts/stop_instance.sh "$id"
-        done < instance_id.txt
+      - ./scripts/stop_instance.sh $(cat instance_id.txt)
