@@ -30,4 +30,8 @@ phases:
     commands:
       - echo "EC2 Only Deployment Completed Successfully!"
       - chmod +x scripts/stop_instance.sh
-      - ./scripts/stop_instance.sh $(cat instance_id.txt)
+      # Loop through all instance IDs and stop each
+      - |
+        while read id; do
+          ./scripts/stop_instance.sh "$id"
+        done < instance_id.txt
