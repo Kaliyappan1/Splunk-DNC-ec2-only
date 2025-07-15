@@ -6,6 +6,7 @@ phases:
       - echo "Environment ready!"
       - terraform --version
       - ansible --version
+      - yum install -y jq
       - echo "Downloading dynamic tfvars from S3..."
       - aws s3 cp s3://splunk-deployment-test/$TFVARS_S3_KEY terraform.tfvars
       - echo "Pre-build phase complete."
@@ -15,11 +16,15 @@ phases:
       - chmod +x scripts/check_key.sh
       - terraform init
       - terraform apply -auto-approve
-      - export INSTANCE_ID=$(terraform output -raw instance_id)
-      - echo $INSTANCE_ID > instance_id.txt
+      # Output instance IDs to file (as list)
+      - terraform output -json instance_id | jq -r '.[]' > instance_id.txt
 
   post_build:
     commands:
       - echo "EC2 Only Deployment Completed Successfully!"
       - chmod +x scripts/stop_instance.sh
-      - ./scripts/stop_instance.sh $(cat instance_id.txt)
+      # Loop through all instance IDs and stop each
+      - |
+        while read id; do
+          ./scripts/stop_instance.sh "$id"
+        done < instance_id.txt
